@@ -1,0 +1,27 @@
+# Compiled Java files
+*.class
+out/
+!out/.gitkeep
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.jar
+!lib/*.jar
+*.log
+
+# Config files (contains sensitive data)
+resources/config.properties.local
+
+# Environment files
+.env
+.env.local
