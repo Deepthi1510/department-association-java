@@ -26,7 +26,12 @@ javac -d "$OUT_DIR" -cp "$CLASSPATH" \
     "$SRC_DIR"/com/deptassoc/db/*.java \
     "$SRC_DIR"/com/deptassoc/dao/*.java \
     "$SRC_DIR"/com/deptassoc/model/*.java \
-    "$SRC_DIR"/com/deptassoc/ui/*.java
+    "$SRC_DIR"/com/deptassoc/auth/*.java \
+    "$SRC_DIR"/com/deptassoc/ui/*.java \
+    "$SRC_DIR"/com/deptassoc/ui/faculty/*.java \
+    "$SRC_DIR"/com/deptassoc/ui/association/*.java \
+    "$SRC_DIR"/com/deptassoc/swingui/*.java \
+    "$SRC_DIR"/com/deptassoc/util/*.java
 
 if [ $? -ne 0 ]; then
     echo "Compilation failed!"

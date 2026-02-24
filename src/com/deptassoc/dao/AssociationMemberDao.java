@@ -2,10 +2,15 @@ package com.deptassoc.dao;
 
 import com.deptassoc.db.DBConnectionManager;
 import com.deptassoc.db.SQLConstants;
+import com.deptassoc.dto.ActivityDTO;
 import com.deptassoc.model.AssociationMember;
+import com.deptassoc.model.Event;
+
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Data Access Object for AssociationMember entity.
@@ -93,5 +98,49 @@ public class AssociationMemberDao {
             rs.getString("role"),
             rs.getDate("joined_date")
         );
+    }
+
+    /**
+     * Get all association members with their roles.
+     * Returns: Map of role -> List of student names
+     */
+    public Map<String, List<String>> getAssociationMembersAndRoles() throws SQLException {
+        Map<String, List<String>> roleMembers = new HashMap<>();
+        String sql = "SELECT am.role, s.s_name " +
+                     "FROM association_members am " +
+                     "JOIN student s ON am.student_id = s.student_id " +
+                     "ORDER BY am.role, s.s_name";
+
+        try (Connection conn = DBConnectionManager.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            while (rs.next()) {
+                String role = rs.getString("role");
+                String sName = rs.getString("s_name");
+                
+                roleMembers.computeIfAbsent(role, k -> new ArrayList<>()).add(sName);
+            }
+        }
+        
+        return roleMembers;
+    }
+
+    /**
+     * Get total count of association members.
+     */
+    public int getTotalMemberCount() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM association_members";
+
+        try (Connection conn = DBConnectionManager.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        
+        return 0;
     }
 }

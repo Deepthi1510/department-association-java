@@ -30,7 +30,9 @@ javac -d %OUT_DIR% -cp .;%CLASSPATH% ^
     %SRC_DIR%\com\deptassoc\db\*.java ^
     %SRC_DIR%\com\deptassoc\dao\*.java ^
     %SRC_DIR%\com\deptassoc\model\*.java ^
-    %SRC_DIR%\com\deptassoc\ui\*.java
+    %SRC_DIR%\com\deptassoc\auth\*.java ^
+    %SRC_DIR%\com\deptassoc\ui\*.java ^
+    %SRC_DIR%\com\deptassoc\util\*.java
 
 if errorlevel 1 (
     echo Compilation failed!

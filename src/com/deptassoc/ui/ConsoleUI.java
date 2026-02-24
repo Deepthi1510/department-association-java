@@ -2,6 +2,7 @@ package com.deptassoc.ui;
 
 import com.deptassoc.dao.*;
 import com.deptassoc.model.*;
+import com.deptassoc.auth.AuthResult;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -11,8 +12,8 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * Console-based UI for managing department associations.
- * Provides menu-driven interface for CRUD operations.
+ * CHANGED: Console-based UI for managing department associations.
+ * Now role-aware with restricted menus based on user role.
  */
 public class ConsoleUI {
     
@@ -27,7 +28,10 @@ public class ConsoleUI {
     private ActivityParticipantDao participantDao;
     private ActivityWinnerDao winnerDao;
     
-    public ConsoleUI() {
+    private AuthResult authResult;  // CHANGED: Added for role-based access
+    
+    // CHANGED: Updated constructor to accept AuthResult
+    public ConsoleUI(AuthResult authResult) {
         this.scanner = new Scanner(System.in);
         this.assocDao = new AssociationDao();
         this.facultyDao = new FacultyDao();
@@ -38,10 +42,16 @@ public class ConsoleUI {
         this.adviserDao = new AssociationFacultyAdviserDao();
         this.participantDao = new ActivityParticipantDao();
         this.winnerDao = new ActivityWinnerDao();
+        this.authResult = authResult;
+    }
+    
+    // CHANGED: Overload for backward compatibility
+    public ConsoleUI() {
+        this(null);
     }
     
     /**
-     * Starts the main menu loop.
+     * CHANGED: Starts the main menu loop with role-based access control.
      */
     public void start() {
         boolean running = true;
@@ -52,32 +62,39 @@ public class ConsoleUI {
                 
                 switch (choice) {
                     case 1:
-                        manageAssociations();
+                        if (canManageAssociations()) manageAssociations();
+                        else System.out.println("❌ You don't have permission to manage associations.");
                         break;
                     case 2:
-                        manageFaculties();
+                        if (canManageFaculties()) manageFaculties();
+                        else System.out.println("❌ You don't have permission to manage faculties.");
                         break;
                     case 3:
-                        manageStudents();
+                        if (canManageStudents()) manageStudents();
+                        else System.out.println("❌ You don't have permission to manage students.");
                         break;
                     case 4:
-                        manageEvents();
+                        if (canManageEvents()) manageEvents();
+                        else System.out.println("❌ You don't have permission to manage events.");
                         break;
                     case 5:
-                        manageActivities();
+                        if (canManageActivities()) manageActivities();
+                        else System.out.println("❌ You don't have permission to manage activities.");
                         break;
                     case 6:
-                        registerParticipant();
+                        if (canRegisterParticipant()) registerParticipant();
+                        else System.out.println("❌ You don't have permission to register participants.");
                         break;
                     case 7:
-                        addWinner();
+                        if (canAddWinner()) addWinner();
+                        else System.out.println("❌ You don't have permission to add winners.");
                         break;
                     case 8:
-                        showReports();
+                        showReports();  // Reports available to all
                         break;
                     case 9:
                         running = false;
-                        System.out.println("Exiting... Goodbye!");
+                        System.out.println("\nGoodbye " + (authResult != null ? authResult.getDisplayName() : "User") + "!");
                         break;
                     default:
                         System.out.println("Invalid choice. Please try again.");
@@ -88,8 +105,68 @@ public class ConsoleUI {
         }
     }
     
+    /**
+     * CHANGED: Role-based menu display.
+     */
     private void printMainMenu() {
-        System.out.println("\n========== MAIN MENU ==========");
+        String role = authResult != null ? authResult.getRole() : "NONE";
+        System.out.println("\n========== MAIN MENU (" + role + ") ==========");
+        
+        if ("STUDENT".equals(role)) {
+            printStudentMenu();
+        } else if ("FACULTY".equals(role)) {
+            printFacultyMenu();
+        } else if ("ASSOCIATION_MEMBER".equals(role)) {
+            printAssociationMemberMenu();
+        } else {
+            printAdminMenu();  // Default/Admin view
+        }
+    }
+    
+    /**
+     * Student-restricted menu.
+     */
+    private void printStudentMenu() {
+        System.out.println("1. View Events (Read-only)");
+        System.out.println("2. View Activities (Read-only)");
+        System.out.println("3. Register for Activity");
+        System.out.println("4. View My Participation Results");
+        System.out.println("5. View Winners");
+        System.out.println("6. View Reports");
+        System.out.println("7. Logout");
+    }
+    
+    /**
+     * Faculty-restricted menu.
+     */
+    private void printFacultyMenu() {
+        System.out.println("1. View Associations (Advise)");
+        System.out.println("2. View Faculties (Read-only)");
+        System.out.println("3. View Students (Read-only)");
+        System.out.println("4. View Events (Advise)");
+        System.out.println("5. View Activities (Advise)");
+        System.out.println("6. View Participants");
+        System.out.println("7. View Reports");
+        System.out.println("8. Logout");
+    }
+    
+    /**
+     * Association member menu.
+     */
+    private void printAssociationMemberMenu() {
+        System.out.println("1. Manage Associations");
+        System.out.println("2. Manage Events");
+        System.out.println("3. Manage Activities");
+        System.out.println("4. Register Participant");
+        System.out.println("5. Add Activity Winner");
+        System.out.println("6. View Reports");
+        System.out.println("7. Logout");
+    }
+    
+    /**
+     * Admin menu (full access).
+     */
+    private void printAdminMenu() {
         System.out.println("1. Manage Associations");
         System.out.println("2. Manage Faculties");
         System.out.println("3. Manage Students");
@@ -98,8 +175,51 @@ public class ConsoleUI {
         System.out.println("6. Register Participant");
         System.out.println("7. Add Activity Winner");
         System.out.println("8. View Reports");
-        System.out.println("9. Exit");
-        System.out.println("==============================");
+        System.out.println("9. Logout");
+    }
+    
+    // ===== ROLE-BASED ACCESS CONTROL =====
+    
+    private boolean canManageAssociations() {
+        return authResult == null || 
+               "ASSOCIATION_MEMBER".equals(authResult.getRole()) ||
+               authResult.getRole() == null;  // Admin
+    }
+    
+    private boolean canManageFaculties() {
+        return authResult == null || 
+               authResult.getRole() == null;  // Admin only
+    }
+    
+    private boolean canManageStudents() {
+        return authResult == null || 
+               authResult.getRole() == null;  // Admin only
+    }
+    
+    private boolean canManageEvents() {
+        return authResult == null || 
+               "ASSOCIATION_MEMBER".equals(authResult.getRole()) ||
+               "FACULTY".equals(authResult.getRole()) ||
+               authResult.getRole() == null;  // Admin
+    }
+    
+    private boolean canManageActivities() {
+        return authResult == null || 
+               "ASSOCIATION_MEMBER".equals(authResult.getRole()) ||
+               authResult.getRole() == null;  // Admin
+    }
+    
+    private boolean canRegisterParticipant() {
+        return authResult == null || 
+               "STUDENT".equals(authResult.getRole()) ||
+               "ASSOCIATION_MEMBER".equals(authResult.getRole()) ||
+               authResult.getRole() == null;  // Admin
+    }
+    
+    private boolean canAddWinner() {
+        return authResult == null || 
+               "ASSOCIATION_MEMBER".equals(authResult.getRole()) ||
+               authResult.getRole() == null;  // Admin
     }
     
     // ===== ASSOCIATION MANAGEMENT =====

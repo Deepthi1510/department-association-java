@@ -21,6 +21,8 @@ Thumbs.db
 
 # Config files (contains sensitive data)
 resources/config.properties.local
+users.json
+users.json.tmp
 
 # Environment files
 .env

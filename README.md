@@ -2,6 +2,8 @@
 
 A pure Java SE application (Java 17+) for managing department associations, students, faculties, events, activities, and participation records using JDBC and MySQL.
 
+**NEW**: Role-based login system with role-restricted menus (STUDENT, FACULTY, ASSOCIATION_MEMBER, ADMIN).
+
 ## Project Overview
 
 This is a **command-line application** with a menu-driven console UI that allows management of:
@@ -11,6 +13,7 @@ This is a **command-line application** with a menu-driven console UI that allows
 - Events (organized by associations)
 - Activities (part of events)
 - Participants and Winners tracking
+- **[NEW] Role-based access control** with user login
 
 **No Spring Framework, No Maven/Gradle** — Uses plain JDBC with simple bash/batch build scripts.
 
@@ -32,11 +35,14 @@ This is a **command-line application** with a menu-driven console UI that allows
 department-association-java/
 ├── src/
 │   └── com/deptassoc/
-│       ├── Main.java                 # Entry point
+│       ├── Main.java                 # Entry point (CHANGED: with login)
+│       ├── auth/                     # [NEW] Authentication system
+│       │   ├── AuthManager.java      # Authentication manager
+│       │   └── AuthResult.java       # Auth result POJO
 │       ├── db/
 │       │   ├── DBConnectionManager.java
 │       │   └── SQLConstants.java
-│       ├── dao/                      # Data Access Objects
+│       ├── dao/                      # Data Access Objects (unchanged)
 │       │   ├── AssociationDao.java
 │       │   ├── FacultyDao.java
 │       │   ├── StudentDao.java
@@ -46,27 +52,26 @@ department-association-java/
 │       │   ├── AssociationFacultyAdviserDao.java
 │       │   ├── ActivityParticipantDao.java
 │       │   └── ActivityWinnerDao.java
-│       ├── model/                    # POJOs
-│       │   ├── Association.java
-│       │   ├── Faculty.java
-│       │   ├── Student.java
-│       │   ├── Event.java
-│       │   ├── Activity.java
-│       │   ├── AssociationMember.java
-│       │   ├── AssociationFacultyAdviser.java
-│       │   ├── ActivityParticipant.java
-│       │   └── ActivityWinner.java
-│       └── ui/
-│           └── ConsoleUI.java
+│       ├── model/                    # POJOs (unchanged)
+│       │   └── (9 model classes)
+│       ├── ui/
+│       │   ├── ConsoleUI.java        # CHANGED: role-aware menus
+│       │   └── LoginUI.java          # [NEW] Login console
+│       └── util/                     # [NEW] Utilities
+│           ├── PasswordUtil.java     # Password hashing
+│           └── SetupUtil.java        # Setup helper
 ├── resources/
 │   └── config.properties             # Database configuration
 ├── lib/                              # Place mysql-connector JAR here
 ├── out/                              # Compiled output (generated)
+├── users.json                        # [NEW] User credentials (generated)
+├── users-sample.json                 # [NEW] Sample users template
 ├── build-windows.bat                 # Windows build script
 ├── build-unix.sh                     # Unix/Linux/macOS build script
 ├── run-windows.bat                   # Windows run script
 ├── run-unix.sh                       # Unix/Linux/macOS run script
 ├── data-seed.sql                     # Optional sample data
+├── LOGIN_SETUP.md                    # [NEW] Login setup guide
 └── README.md                         # This file
 ```
 
@@ -315,9 +320,91 @@ Then run the application and explore the sample data.
 - Uses MySQL JDBC driver with UTC timezone
 
 ### Business Logic
-- `ConsoleUI` class handles user interactions
+- `ConsoleUI` class handles user interactions with role-based access control
 - `SQLConstants` class stores all SQL queries as constants
 - Model classes are simple POJOs with getters/setters
+- `AuthManager` handles user authentication with password hashing
+- `LoginUI` provides console-based login interface
+
+## Authentication & Role-Based Access
+
+### Overview
+
+The system now includes **role-based login** with four role types:
+- **STUDENT**: View events/activities, register for participation
+- **FACULTY**: Advise associations, view participants
+- **ASSOCIATION_MEMBER**: Create/manage events and activities
+- **ADMIN** (no role): Full access to all features
+
+### Setup (NEW in v2.0)
+
+**See `LOGIN_SETUP.md` for detailed instructions.**
+
+Quick start:
+
+1. **Create users.json** in project root:
+   ```json
+   [
+     {
+       "type": "STUDENT",
+       "id": 1,
+       "username": "alice",
+       "passwordHash": "salt:hash"
+     }
+   ]
+   ```
+
+2. **Generate password hashes** using `SetupUtil`:
+   ```bash
+   java -cp out com.deptassoc.util.SetupUtil hash "mypassword"
+   ```
+
+3. **Build and run**:
+   ```bash
+   build-windows.bat && run-windows.bat
+   # or
+   ./build-unix.sh && ./run-unix.sh
+   ```
+
+4. **Login** with username/password from users.json
+
+### Security Features
+
+- ✓ Password hashing with SHA-256 + salt (base64 encoded)
+- ✓ Optional BCrypt support (add `org.mindrot:jbcrypt` JAR)
+- ✓ Max 5 failed login attempts per session
+- ✓ Protected file permissions for `users.json` (600 Unix / NTFS ACL Windows)
+- ✓ No plaintext passwords stored
+
+### Role-Restricted Menus
+
+**STUDENT Menu**:
+- View Events (read-only)
+- View Activities (read-only)
+- Register for Activity
+- View My Results
+- View Winners
+- View Reports
+
+**FACULTY Menu**:
+- View Associations
+- View Faculties (read-only)
+- View Students (read-only)
+- View Events (advise)
+- View Activities (advise)
+- View Participants
+- View Reports
+
+**ASSOCIATION_MEMBER Menu**:
+- Manage Associations
+- Manage Events
+- Manage Activities
+- Register Participant
+- Add Activity Winner
+- View Reports
+
+**ADMIN Menu** (default):
+- Full access to all features
 
 ## Troubleshooting
 
@@ -354,6 +441,29 @@ Then run the application and explore the sample data.
   - Ensure Java is installed: `java -version`
   - Add Java `bin/` directory to PATH
   - Restart command prompt after PATH changes
+
+### Login Errors
+
+**Error**: "No users configured — run createInitialUsers()"
+- **Solution**: 
+  - Create `users.json` in project root
+  - Or run: `java -cp out com.deptassoc.util.SetupUtil init-users`
+  - Or call `AuthManager.createInitialUsers()` from code
+
+**Error**: "Invalid credentials"
+- **Solution**:
+  - Check username/password in `users.json`
+  - Verify `id` matches database record IDs
+  - Ensure password hash is correct format: `salt:hash`
+
+**Error**: "Maximum login attempts exceeded"
+- **Solution**: Restart the application
+
+**Error**: "You don't have permission"
+- **Solution**:
+  - Check user role in `users.json`
+  - Verify role has access to requested feature
+  - See Role-Restricted Menus section above
 
 ## Compilation Details
 

@@ -1,0 +1,20 @@
+[
+  {
+    "type": "STUDENT",
+    "id": 1,
+    "username": "alice",
+    "passwordHash": "jB/K+nPVvLnpB9X3qL2mKg==:EJ8Eg4m8qP/ZZ5LjA7D7O9zH3kF8L2M5p9Q4w6X8YzN3/Z0==" 
+  },
+  {
+    "type": "FACULTY",
+    "id": 1,
+    "username": "drsmith",
+    "passwordHash": "vW3nK+zPqL8mN5O2R9S6Tv==:X1y2Z3a4B5c6D7e8F9g0H1i2J3k4L5m6N7o8P9q0R1s2T3u4V5w6"
+  },
+  {
+    "type": "ASSOCIATION_MEMBER",
+    "id": 1,
+    "username": "ashok",
+    "passwordHash": "aB1cD2eF3gH4iJ5kL6mN7oP==:Q8r9S0tUvWxYzAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGh"
+  }
+]
